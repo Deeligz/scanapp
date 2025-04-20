@@ -18,17 +18,6 @@ export default function UpcScanner() {
         inputRef.current?.focus();
     }, [scannedCodes]);
 
-    // Process input changes with debounce
-    useEffect(() => {
-        if (upcCode && /^\d+$/.test(upcCode)) {
-            const timer = setTimeout(() => {
-                processScannedCode(upcCode);
-            }, 100); // Short delay to ensure we have the complete code
-
-            return () => clearTimeout(timer);
-        }
-    }, [upcCode]);
-
     const processScannedCode = (code: string) => {
         if (code && scannedCodes.length < MAX_CODES && !scannedCodes.includes(code)) {
             setScannedCodes(prev => [...prev, code]);
@@ -53,10 +42,12 @@ export default function UpcScanner() {
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        // Handle scanner input (which typically ends with Enter)
         if (e.key === 'Enter') {
             e.preventDefault();
-            if (upcCode) {
-                processScannedCode(upcCode);
+            const currentValue = e.currentTarget.value;
+            if (currentValue && /^\d+$/.test(currentValue)) {
+                processScannedCode(currentValue);
             }
         }
     };
