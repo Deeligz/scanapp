@@ -6,6 +6,8 @@ export default function UpcScanner() {
     const [upcCode, setUpcCode] = useState('');
     const [scannedCodes, setScannedCodes] = useState<string[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
+    const scanBufferRef = useRef<string>('');
+    const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const MAX_CODES = 5;
 
     // Auto-focus input field on component mount
@@ -18,11 +20,43 @@ export default function UpcScanner() {
         inputRef.current?.focus();
     }, [scannedCodes]);
 
+    // Handle scanner input
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Clear timeout on each keypress
+            if (scanTimeoutRef.current) {
+                clearTimeout(scanTimeoutRef.current);
+            }
+
+            // Add character to buffer
+            scanBufferRef.current += e.key;
+
+            // Set timeout to process the scan
+            scanTimeoutRef.current = setTimeout(() => {
+                const code = scanBufferRef.current;
+                if (code && /^\d+$/.test(code)) {
+                    handleScan(code);
+                }
+                scanBufferRef.current = ''; // Clear buffer
+            }, 50); // 50ms timeout assumes end of scan
+        };
+
+        // Add event listener
+        window.addEventListener('keydown', handleKeyDown);
+
+        // Cleanup
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            if (scanTimeoutRef.current) {
+                clearTimeout(scanTimeoutRef.current);
+            }
+        };
+    }, []); // Empty dependency array since we're using refs
+
     const handleScan = (scannedCode: string) => {
         if (scannedCode && scannedCodes.length < MAX_CODES && !scannedCodes.includes(scannedCode)) {
             setScannedCodes(prev => [...prev, scannedCode]);
             setUpcCode(''); // Clear input field after successful scan
-            // Focus will be handled by the useEffect above
         }
     };
 
