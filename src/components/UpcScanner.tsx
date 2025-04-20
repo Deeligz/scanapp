@@ -1,61 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function UpcScanner() {
     const [upcCode, setUpcCode] = useState('');
     const [isScanning, setIsScanning] = useState(false);
     const [scannedCodes, setScannedCodes] = useState<string[]>([]);
+    const inputRef = useRef<HTMLInputElement>(null);
     const MAX_CODES = 5;
 
+    // Auto-focus input field on component mount
     useEffect(() => {
-        let scanBuffer = '';
-        let scanTimeout: NodeJS.Timeout;
+        inputRef.current?.focus();
+    }, []);
 
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Prevent handling if we're in an input field
-            if (e.target instanceof HTMLInputElement) {
-                return;
-            }
-
-            // Start collecting scan data
-            if (!isScanning) {
-                setIsScanning(true);
-            }
-
-            // Clear the timeout on each keypress
-            clearTimeout(scanTimeout);
-
-            // Add character to buffer
-            scanBuffer += e.key;
-
-            // Set timeout to process the scan
-            scanTimeout = setTimeout(() => {
-                if (scanBuffer) {
-                    // Process only if the buffer contains numbers
-                    if (/^\d+$/.test(scanBuffer)) {
-                        handleScan(scanBuffer);
-                    }
-                    scanBuffer = '';
-                }
-                setIsScanning(false);
-            }, 50); // 50ms timeout assumes end of scan
-        };
-
-        // Add event listener
-        window.addEventListener('keydown', handleKeyDown);
-
-        // Cleanup
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            clearTimeout(scanTimeout);
-        };
-    }, [isScanning]);
+    // Keep focus on input field after each scan
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, [scannedCodes]);
 
     const handleScan = (scannedCode: string) => {
-        if (scannedCodes.length < MAX_CODES && !scannedCodes.includes(scannedCode)) {
+        if (scannedCode && scannedCodes.length < MAX_CODES && !scannedCodes.includes(scannedCode)) {
             setScannedCodes(prev => [...prev, scannedCode]);
             setUpcCode(''); // Clear input field after successful scan
+            // Focus will be handled by the useEffect above
         }
     };
 
@@ -68,22 +36,23 @@ export default function UpcScanner() {
         }
     };
 
-    const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         if (/^\d*$/.test(value)) { // Only allow digits
             setUpcCode(value);
         }
     };
 
-    const handleManualAdd = () => {
-        if (upcCode && scannedCodes.length < MAX_CODES && !scannedCodes.includes(upcCode)) {
-            setScannedCodes(prev => [...prev, upcCode]);
-            setUpcCode(''); // Clear input field after adding
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && upcCode) {
+            e.preventDefault();
+            handleScan(upcCode);
         }
     };
 
     const removeCode = (index: number) => {
         setScannedCodes(prev => prev.filter((_, i) => i !== index));
+        inputRef.current?.focus(); // Refocus input after removing a code
     };
 
     return (
@@ -94,28 +63,21 @@ export default function UpcScanner() {
                         htmlFor="upc-input" 
                         className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                        Enter UPC Code ({scannedCodes.length}/{MAX_CODES})
+                        Scan UPC Code ({scannedCodes.length}/{MAX_CODES})
                     </label>
-                    <div className="flex gap-2">
-                        <input
-                            id="upc-input"
-                            type="text"
-                            value={upcCode}
-                            onChange={handleManualInput}
-                            placeholder="Scan or enter UPC code..."
-                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                            pattern="[0-9]*"
-                            inputMode="numeric"
-                        />
-                        <button
-                            type="button"
-                            onClick={handleManualAdd}
-                            disabled={!upcCode || scannedCodes.length >= MAX_CODES}
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            Add
-                        </button>
-                    </div>
+                    <input
+                        ref={inputRef}
+                        id="upc-input"
+                        type="text"
+                        value={upcCode}
+                        onChange={handleInputChange}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Scan UPC code..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                        pattern="[0-9]*"
+                        inputMode="numeric"
+                        autoComplete="off"
+                    />
                 </div>
 
                 {isScanning && (
