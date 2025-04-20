@@ -18,16 +18,21 @@ export default function UpcScanner() {
         inputRef.current?.focus();
     }, [scannedCodes]);
 
-    const handleScan = (scannedCode: string) => {
-        if (scannedCode && scannedCodes.length < MAX_CODES && !scannedCodes.includes(scannedCode)) {
-            // First update the input field to show the code
-            setUpcCode(scannedCode);
-            
-            // Then after a brief delay, add it to the list and clear the input
-            setTimeout(() => {
-                setScannedCodes(prev => [...prev, scannedCode]);
-                setUpcCode('');
-            }, 500); // Show the code for 500ms
+    // Process input changes with debounce
+    useEffect(() => {
+        if (upcCode && /^\d+$/.test(upcCode)) {
+            const timer = setTimeout(() => {
+                processScannedCode(upcCode);
+            }, 100); // Short delay to ensure we have the complete code
+
+            return () => clearTimeout(timer);
+        }
+    }, [upcCode]);
+
+    const processScannedCode = (code: string) => {
+        if (code && scannedCodes.length < MAX_CODES && !scannedCodes.includes(code)) {
+            setScannedCodes(prev => [...prev, code]);
+            setUpcCode(''); // Clear input field after successful scan
         }
     };
 
@@ -42,14 +47,7 @@ export default function UpcScanner() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        // When input changes, check if it ends with a return character
-        if (value.includes('\n')) {
-            // Remove the return character and process the code
-            const code = value.replace('\n', '');
-            if (/^\d+$/.test(code)) {
-                handleScan(code);
-            }
-        } else if (/^\d*$/.test(value)) {
+        if (/^\d*$/.test(value)) { // Only allow digits
             setUpcCode(value);
         }
     };
@@ -58,7 +56,7 @@ export default function UpcScanner() {
         if (e.key === 'Enter') {
             e.preventDefault();
             if (upcCode) {
-                handleScan(upcCode);
+                processScannedCode(upcCode);
             }
         }
     };
