@@ -6,8 +6,6 @@ export default function UpcScanner() {
     const [upcCode, setUpcCode] = useState('');
     const [scannedCodes, setScannedCodes] = useState<string[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
-    const scanBufferRef = useRef<string>('');
-    const scanTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
     const MAX_CODES = 5;
 
     // Auto-focus input field on component mount
@@ -20,43 +18,16 @@ export default function UpcScanner() {
         inputRef.current?.focus();
     }, [scannedCodes]);
 
-    // Handle scanner input
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            // Clear timeout on each keypress
-            if (scanTimeoutRef.current) {
-                clearTimeout(scanTimeoutRef.current);
-            }
-
-            // Add character to buffer
-            scanBufferRef.current += e.key;
-
-            // Set timeout to process the scan
-            scanTimeoutRef.current = setTimeout(() => {
-                const code = scanBufferRef.current;
-                if (code && /^\d+$/.test(code)) {
-                    handleScan(code);
-                }
-                scanBufferRef.current = ''; // Clear buffer
-            }, 50); // 50ms timeout assumes end of scan
-        };
-
-        // Add event listener
-        window.addEventListener('keydown', handleKeyDown);
-
-        // Cleanup
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-            if (scanTimeoutRef.current) {
-                clearTimeout(scanTimeoutRef.current);
-            }
-        };
-    }, []); // Empty dependency array since we're using refs
-
     const handleScan = (scannedCode: string) => {
         if (scannedCode && scannedCodes.length < MAX_CODES && !scannedCodes.includes(scannedCode)) {
-            setScannedCodes(prev => [...prev, scannedCode]);
-            setUpcCode(''); // Clear input field after successful scan
+            // First update the input field to show the code
+            setUpcCode(scannedCode);
+            
+            // Then after a brief delay, add it to the list and clear the input
+            setTimeout(() => {
+                setScannedCodes(prev => [...prev, scannedCode]);
+                setUpcCode('');
+            }, 500); // Show the code for 500ms
         }
     };
 
@@ -71,15 +42,24 @@ export default function UpcScanner() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        if (/^\d*$/.test(value)) { // Only allow digits
+        // When input changes, check if it ends with a return character
+        if (value.includes('\n')) {
+            // Remove the return character and process the code
+            const code = value.replace('\n', '');
+            if (/^\d+$/.test(code)) {
+                handleScan(code);
+            }
+        } else if (/^\d*$/.test(value)) {
             setUpcCode(value);
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter' && upcCode) {
+        if (e.key === 'Enter') {
             e.preventDefault();
-            handleScan(upcCode);
+            if (upcCode) {
+                handleScan(upcCode);
+            }
         }
     };
 
