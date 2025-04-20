@@ -36,18 +36,24 @@ export default function UpcScanner() {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        if (/^\d*$/.test(value)) { // Only allow digits
+        
+        // Check if the value ends with a newline or return character
+        if (value.includes('\n') || value.includes('\r')) {
+            // Process the code without the newline/return character
+            const cleanValue = value.replace(/[\n\r]/g, '');
+            if (/^\d+$/.test(cleanValue)) {
+                processScannedCode(cleanValue);
+            }
+        } else if (/^\d*$/.test(value)) {
             setUpcCode(value);
         }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        // Handle scanner input (which typically ends with Enter)
         if (e.key === 'Enter') {
             e.preventDefault();
-            const currentValue = e.currentTarget.value;
-            if (currentValue && /^\d+$/.test(currentValue)) {
-                processScannedCode(currentValue);
+            if (upcCode && /^\d+$/.test(upcCode)) {
+                processScannedCode(upcCode);
             }
         }
     };
