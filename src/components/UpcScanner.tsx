@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react';
 
 export default function UpcScanner() {
     const [upcCode, setUpcCode] = useState('');
-    const [isScanning, setIsScanning] = useState(false);
     const [scannedCodes, setScannedCodes] = useState<string[]>([]);
     const inputRef = useRef<HTMLInputElement>(null);
     const MAX_CODES = 5;
@@ -79,12 +78,6 @@ export default function UpcScanner() {
                         autoComplete="off"
                     />
                 </div>
-
-                {isScanning && (
-                    <div className="text-sm text-blue-600 animate-pulse">
-                        Scanning...
-                    </div>
-                )}
 
                 {/* List of scanned codes */}
                 <div className="space-y-2">
